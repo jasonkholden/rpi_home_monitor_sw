@@ -1,0 +1,4 @@
+MAILTO=""
+0 */6 * * * cd ~/rpi_home_monitor/software/usr/bin/ && ./poweroutage.sh
+@reboot cd /home/pi/rpi_home_monitor/software/usr/bin && rpi_home_monitor
+

@@ -1,0 +1,87 @@
+#!/bin/bash
+
+# Rasberry Pi Home Monitor Program - monitor your home with a rasberry pi
+# Copyright (C) 2015 Jason K Holden
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+# You should have received a copy of the GNU General Public License along
+# with this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+
+# Source the configuration file for the email address to use
+# for notifications
+
+if [ ! -f ./config.cfg ]; then
+    echo "Failed to find config file: ./config.cfg"
+    exit 1
+fi
+
+. ./config.cfg
+
+
+TEST_PB_IN=4
+TEMP_IN=17
+WATER_IN=23
+ALARM_OUT=24
+
+
+while [ ! -f /sys/class/gpio/export ]; do
+  echo "Awaiting gpio setup"
+  sleep 1
+done
+
+echo "Setting up gpio pins"
+echo "${TEST_PB_IN}" > /sys/class/gpio/export
+echo "${ALARM_OUT}"  > /sys/class/gpio/export
+echo "${WATER_IN}"   > /sys/class/gpio/export
+echo "${TEMP_IN}"    > /sys/class/gpio/export
+
+
+sleep 5
+
+echo "out" > /sys/class/gpio/gpio${ALARM_OUT}/direction
+echo "in"  > /sys/class/gpio/gpio${TEST_PB_IN}/direction
+echo "in"  > /sys/class/gpio/gpio${WATER_IN}/direction
+echo "in"  > /sys/class/gpio/gpio${TEMP_IN}/direction
+
+echo "Starting Alarm Monitor"
+echo "0" > /sys/class/gpio/gpio${ALARM_OUT}/value
+time_since_last=0
+while true; do
+  test_val=$(cat /sys/class/gpio/gpio${TEST_PB_IN}/value)
+  water_val=$(cat /sys/class/gpio/gpio${WATER_IN}/value)
+  temp_val=$(cat /sys/class/gpio/gpio${TEMP_IN}/value)
+  if [ "${test_val}" = "1" ] || [ "${water_val}" = "1" ]; then
+    echo "Alarm detected!"
+    echo "1" > /sys/class/gpio/gpio${ALARM_OUT}/value
+    cur_alarm_time=$(date +%s)
+    delta=$((${cur_alarm_time} - ${time_since_last}))
+    
+    # Only send an email once a minute about the alarm
+    if [ ${delta} -gt 60 ]; then
+
+      echo "Sending alarm email!" 
+      echo "Alarm detected. test=${test_val} water_val=${water_val} temp_val=${temp_val}" | mail -s "Alarm Occurred! ${cur_date}" ${email_addr}
+      time_since_last=${cur_alarm_time}
+
+      echo "Taking picture"
+      raspistill -o ./home_${cur_alarm_time}.jpg
+      if [ -f ./home_${cur_alarm_time}.jpg ]; then
+        echo "Sending picture"
+        mpack -s "Picture from $(date)" ./home_${cur_alarm_time}.jpg ${email_addr}
+      else
+        echo "No picture to send"
+      fi
+    fi
+
+  else
+    echo "0" > /sys/class/gpio/gpio${ALARM_OUT}/value
+  fi
+done

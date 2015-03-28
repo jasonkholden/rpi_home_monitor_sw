@@ -1,0 +1,5 @@
+To detect i2c:
+enable i2c module via Advanced Settings in raspi-config
+
+modify /boot/cmdline.txt to include
+bcm2708.vc_i2c_override=1
