@@ -1,0 +1,24 @@
+Rasberry Pi Home Monitoring Software
+
+This is software which powers a custom Rasberry Pi B+ HAT
+(Hardware Attached on Top)
+
+It will automatically send updates via email with the current temperature
+as reported by the Rasberry Pi.  By setting up the temperature email to
+occur periodically, this also gives a positive indication that the power
+has not gone out.
+
+
+To setup email capability on your Rasberry Pi, you will need to install the
+folling libraries:
+sudo apt-get install ssmtp
+sudo apt-get install mailutils
+sudo apt-get install mpack
+
+Next, edit the Rasberry Pi's ssmtp.conf file.  See this project for a
+good example.
+
+Its likely you'll want to use Wifi to connect to the internet.  See this
+projects /etc/network/interfaces and /etc/wpa_supplicant/wpa_supplicant.conf
+for a good examples of a typical network configuration
+
